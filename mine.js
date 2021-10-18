@@ -2,12 +2,11 @@ const Block = require('./models/Block');
 const Transaction = require('./models/Transaction');
 const UTXO = require('./models/UTXO');
 const db = require('./db');
-const {PUBLIC_KEY} = require('./config');
-const TARGET_DIFFICULTY = BigInt("0x0" + "F".repeat(63));
+const calculateDiff = require('./calculateDiff');
+const {PUBLIC_KEY} = require('./scripts/userConfig');
 const BLOCK_REWARD = 10;
 
-let mining = true;
-mine();
+let mining = false;
 
 function startMining() {
   mining = true;
@@ -19,27 +18,40 @@ function stopMining() {
 }
 
 function mine() {
-  if(!mining) return;
+  if(!mining || !db.blockchain.isValid()) return;
 
   const block = new Block();
 
-  // TODO: add transactions from the mempool
+  const temppool = db.mempool
+  for(let i = temppool.length - 1; i >= 0; i--) {
+    block.addTransaction(temppool[i]);
+  }
 
+  db.mempool.filter(transaction => db.mempool.indexOf(transaction) === -1)
+  
   const coinbaseUTXO = new UTXO(PUBLIC_KEY, BLOCK_REWARD);
   const coinbaseTX = new Transaction([], [coinbaseUTXO]);
   block.addTransaction(coinbaseTX);
 
-  while(BigInt('0x' + block.hash()) >= TARGET_DIFFICULTY) {
+  while(BigInt('0x' + block.hash()) >= db.difficulty) {
     block.nonce++;
   }
 
+  block.previousHash = db.blockchain.blocks[db.blockchain.blocks.length - 1].hash();
+
   block.execute();
+
+  db.blockTime.push(Date.now() - block.timestamp);
+
+  console.log(block);
 
   db.blockchain.addBlock(block);
 
   console.log(`Mined block #${db.blockchain.blockHeight()} with a hash of ${block.hash()} at nonce ${block.nonce}`);
 
-  setTimeout(mine, 2500);
+  calculateDiff()
+
+  setTimeout(mine);
 }
 
 module.exports = {

@@ -1,8 +1,7 @@
 const client = require('./client');
-const {argv} = require('yargs');
-const {address} = argv;
+const {PUBLIC_KEY} = require('./userConfig');
 
-client.request('getBalance', [address], function(err, response) {
+client.request('getBalance', [PUBLIC_KEY], function(err, response) {
   if(err) throw err;
-  console.log(response.balance);
+  console.log(response.result);
 });

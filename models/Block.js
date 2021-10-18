@@ -4,17 +4,19 @@ class Block {
   constructor() {
     this.timestamp = Date.now();
     this.nonce = 0;
-    this.transactions = [];
+    this.transactions= [];
+    this.previousHash = '';
   }
   addTransaction(tx) {
     this.transactions.push(tx);
   }
   hash() {
     return SHA256(
-      this.timestamp + "" +
-      this.nonce + "" +
-      JSON.stringify(this.transactions)
-    ).toString();
+      this.timestamp + "" + 
+      this.nonce + "" + 
+      JSON.stringify(this.transactions) + "" +
+      this.previousHash
+      ).toString();
   }
   execute() {
     this.transactions.forEach(x => x.execute());
